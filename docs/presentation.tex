@@ -1,0 +1,194 @@
+\documentclass[gray]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[english,russian]{babel}
+\usepackage{newtxtext,newtxmath}
+\usepackage{graphicx} % Пакет для работы с изображениями
+\usepackage{adjustbox} % Hyperlinks
+\usepackage{courier}
+\usepackage{blindtext}
+
+\usepackage{float}
+\usepackage{listings}
+
+\definecolor{c}{HTML}{000050}
+
+\usetheme{default}
+
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{navigation symbols}{}
+
+\begin{document}
+
+\begingroup
+\setbeamertemplate{footline}{}
+\begin{frame}
+%\begin{center}
+    % \hfill
+    \begin{minipage}{0.1\textwidth}
+        \includegraphics[width=1.7cm]{img/bmstu.pdf}
+    \end{minipage}
+    % \hspace{1cm}
+    \hfill
+    \begin{minipage}{0.8\textwidth}\centering\bfseries
+        {
+            \linespread{1}\selectfont\tiny
+            \vspace{0.1cm}
+            {Министерство~науки~и~высшего~образования~Российской~Федерации}
+
+            {Федеральное~государственное~бюджетное~образовательное~учреждение высшего~образования}
+
+            {
+                <<Московский~государственный~технический~университет
+
+                имени~Н.Э.~Баумана
+
+                (национальный~исследовательский~университет)>>
+            }
+
+            {(МГТУ им. Н.Э.~Баумана)}
+            \vspace{0.1cm}
+        }
+    \end{minipage}
+
+    \vspace{0.2cm}
+    %\rule{\linewidth}{2.8pt}
+    \rule[3ex]{\linewidth}{1pt}
+
+    \vfill
+
+    \begin{center}
+    \Large Разработка сервера для отдачи статического содержимого с диска
+    \end{center}
+
+    \vfill
+
+    \begin{minipage}[t]{0.45\textwidth}
+        \small
+        \raggedright
+        Выполнил:
+
+        студент 4 курса
+
+        группы ИУ7-74Б
+
+        \makebox[0pt][l]{Рунов Константин Алексеевич}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.45\textwidth}
+        \small
+        \raggedleft
+        Руководитель:
+
+        \makebox[0pt][r]{Клочков Максим Николаевич}
+    \end{minipage}
+
+    \vfill
+
+    \begin{center}
+        Москва, \the\year\ г.
+    \end{center}
+\end{frame}
+\endgroup
+
+\begin{frame}
+    \frametitle{Цель и задачи}
+    Целью данной работы является разработка сервера для отдачи статического содержимого с диска.
+
+    \vfill
+
+    Задачи:
+    \begin{itemize}
+        \item провести анализ предметной области;
+        \item разработать алгоритмы работы сервера;
+        \item выбрать средства реализации и реализовать разработанные алгоритмы;
+        \item провести исследование зависимости общего времени обслуживания запросов от их количества и сравнить полученные результаты с сервером nginx.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Анализ предметной области. Статический веб-сервер}
+    \centering
+    \includegraphics[height=0.9\textheight]{diag/webserver.pdf}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Анализ предметной области. Мультиплексирование}
+    \centering
+    \includegraphics[width=\textwidth]{img/select.png}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Алгоритм работы сервера --- main}
+    \centering
+    \includegraphics[height=0.8\textheight]{diag/main.pdf}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Алгоритм работы сервера --- spawn\_workers}
+    \centering
+    \includegraphics[height=0.8\textheight]{diag/spawn_workers.pdf}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Алгоритм работы сервера --- handle\_client}
+    \centering
+    \includegraphics[height=0.8\textheight]{diag/handle_client.pdf}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Средства реализации}
+    %\centering
+    Язык программирования: C
+
+    Среда разработки: Neovim
+\end{frame}
+
+\begin{frame}
+    \frametitle{Результаты нагрузочного тестирования}
+    \centering
+    \includegraphics[height=0.8\textheight]{img/plot.pdf}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Сравнительная таблица реализованного веб-сервера и веб-сервера nginx}
+    \centering
+
+    \begin{table}[H]
+        \centering
+        \caption{Зависимость общего времени обработки запросов от количества запросов}
+        \label{tab:table}
+        \begin{tabular}{|c|c|c|}
+            \hline
+            \textbf{Количество запросов} & \textbf{Разработанный сервер (с)} & \textbf{nginx (с)} \\ \hline
+            250                          & 3.141                 & 3.774              \\ \hline
+            500                          & 6.282                 & 7.386              \\ \hline
+            750                          & 9.376                 & 11.610             \\ \hline
+            1000                         & 12.510                & 15.239             \\ \hline
+            1250                         & 15.685                & 18.599             \\ \hline
+            1500                         & 18.828                & 22.134             \\ \hline
+            1750                         & 21.866                & 26.472             \\ \hline
+            2000                         & 25.011                & 29.502             \\ \hline
+        \end{tabular}
+    \end{table}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Заключение}
+Цель данной работы, а именно разработка сервера для отдачи статического содержимого с диска, была достигнута.
+
+Для достижения поставленной цели были решены следующие задачи:
+\begin{itemize}
+    \item проведен анализ предметной области;
+    \item разработан алгоритмы работы сервера;
+    \item выбраны средства реализации и реализовать разработанные алгоритмы;
+    \item проведено исследование зависимости общего времени обслуживания запросов от их количества и сравнение полученных результатов с сервером nginx.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Заключение}
+В результате проведенного исследования было установлено, что общее время обработки запросов разработанным сервером в среднем меньше общего времени обработки запросов nginx приблизительно в ${5}/{6}$ раза, а также, по мере увеличения количества запросов, можно наблюдать линейный рост общего времени обработки запросов для обоих серверов.
+\end{frame}
+
+\end{document}
