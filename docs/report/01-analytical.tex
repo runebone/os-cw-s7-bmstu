@@ -590,10 +590,11 @@ kfree(ptr);
 
 Мониторинг выделения и использования памяти в ядре Linux может осуществляться разными способами, включая перехват системных вызовов и хуки ядра, а также использование встроенных системных интерфейсов.
 
-\subsubsection{Перехват системных вызовов и хуки ядра}
+%\subsubsection*{Перехват системных вызовов и хуки ядра}
 
 Существует множество способов перехвата системных вызовов.
-Далее будут рассмотрены самые распространенные --- kprobes, tracepoints, ftrace, perf и eBPF.
+%Далее будут рассмотрены самые распространенные --- kprobes, tracepoints, ftrace, perf и eBPF.
+Далее будут рассмотрены самые распространенные --- kprobes, tracepoints и ftrace.
 
 \subsubsection*{kprobes}
 
@@ -717,8 +718,12 @@ Ftrace --- это фреймворк, состоящий из нескольки
 %
 %\subsubsection*{/proc/slabinfo}
 
-\subsubsection{Сравнительный анализ подходов}
+%\subsubsection{Сравнительный анализ подходов}
 
-\subsubsection{Выбор метода мониторинга}
+%\subsubsection{Выбор метода мониторинга}
 
-%\subsection*{Вывод}
+\subsection*{Вывод}
+
+В данном разделе были рассмотрены механизмы выделения памяти в ядре Linux, понятия NUMA, узлов памяти, зон и SLAB-кэша.
+Были рассмотрены структуры struct page, struct kmem\_cache, struct slab и функции alloc\_pages, kmem\_cache\_create, kmem\_cache\_alloc, kmem\_cache\_free, kme-m\_cache\_destroy, kmalloc, kfree.
+Были рассмотрены способы мониторинга памяти с помощью механизмов kprobes, tracepoints и ftrace.
