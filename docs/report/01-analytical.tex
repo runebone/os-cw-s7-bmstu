@@ -707,16 +707,18 @@ Ftrace --- это фреймворк, состоящий из нескольки
 Одно из самых распространенных применений ftrace --- трассировка событий.
 По всему ядру расположены сотни статических точек событий, которые можно включить через файловую систему tracefs, чтобы посмотреть, что происходит в определенных частях ядра.~\cite{ftrace}
 
-\subsubsection*{perf и eBPF}
+В листинге \ref{lst:ftrace} приложения А приведен пример реализации загружаемого модуля ядра для мониторинга системных вызовов \_\_kmalloc и kmem\_-cache\_alloc с использованием фреймворка ftrace.
 
-\subsubsection{Системные интерфейсы ядра для мониторинга памяти}
+%\subsubsection*{perf и eBPF}
 
-\subsubsection*{/proc/meminfo}
-
-\subsubsection*{/proc/slabinfo}
+%\subsubsection{Системные интерфейсы ядра для мониторинга памяти}
+%
+%\subsubsection*{/proc/meminfo}
+%
+%\subsubsection*{/proc/slabinfo}
 
 \subsubsection{Сравнительный анализ подходов}
 
 \subsubsection{Выбор метода мониторинга}
 
-\subsection*{Вывод}
+%\subsection*{Вывод}

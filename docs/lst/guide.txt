@@ -1,0 +1,56 @@
+Руководство пользователя.
+
+1. Склонировать репозиторий Linux:
+$ git clone https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+
+2. Перейти в директорию linux:
+$ cd linux
+
+3. Перейти на ветку версии ядра 6.6:
+$ git checkout v6.6
+
+4. Зайти в конфигуратор ядра:
+$ make menuconfig
+
+5. Включить флаг KALLSYMS:
+-> General setup
+    -> Configure standard kernel features (expert users) (EXPERT [=y])
+        -> Load all symbols for debugging/ksymoops (KALLSYMS [=y])
+
+6. Сохранить конфигурацию:
+<Save>
+
+7. Собрать сжатый образ ядра bzImage:
+$ make -j{NUM_THREADS} bzImage modules
+
+8. Склонировать репозиторий для быстрого запуска виртуальной машины QEMU на основе собранного ядра:
+$ git clone https://github.com/bgmerrell/vkerndev
+
+9. Перейти в директорию vkerndev:
+$ cd vkerndev
+
+10*. Запустить скрипт для создания виртуальной машины:
+$ python make_vm.py
+
+11*. Запустить скрипт для запуска виртуальной машины:
+$ python run_vm.py
+
+12. Поместить программу загружаемого модуля в директорию, указанную как shared при запуске виртуальной машины:
+
+13. Собрать программу:
+$ su user
+$ cd
+$ cd host
+$ cd <Shared папка с программой>
+$ make
+
+14. Инициализировать загружаемый модуль:
+$ sudo insmod mem_monitor.ko
+
+15. Просмотр информации, создаваемой загружаемым модулем:
+$ sudo cat /proc/mem_monitor
+
+16. Выгрузить загружаемый модуль:
+$ sudo rmmod mem_monitor
+
+* В скриптах предварительно нужно указать свои настройки и пути к файлам, в том числе, к файлу собранного ядра.

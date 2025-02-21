@@ -1,107 +1,97 @@
 \section{Технологический раздел}
 
-%В данном разделе будут описаны выбранные средства реализации статического сервера, а также приведены листинги кода реализации.
-%
-%\subsection{Средства реализации}
-%
-%Для реализации статического сервера был выбран язык программирования C~\cite{c}, так как он соответствует требованиям задания на курсовую работу и позволяет использовать все необходимые системные вызовы.
-%
-%В качестве среды разработки был выбран Neovim~\cite{neovim}, так как он позволяет редактировать файлы с исходным кодом программы.
-%
-%\subsection{Реализация сервера}
-%
-%Ниже приведены листинги реализации статического сервера на языке программирования C.
-%
-%\begin{code}
-%\begin{lstinputlisting}[
-%        label={lst:},
-%        caption={main.c},
-%        firstline=33,
-%        lastline=61,
-%    ]{lst/main.c}
-%\end{lstinputlisting}
-%\end{code}
-%
-%\begin{code}
-%\begin{lstinputlisting}[
-%        label={lst:},
-%        caption={spawn\_workers},
-%        firstline=63,
-%        lastline=78,
-%    ]{lst/main.c}
-%\end{lstinputlisting}
-%\end{code}
-%
-%%\begin{code}
-%\begin{lstinputlisting}[
-%        label={lst:},
-%        caption={handle\_client},
-%        firstline=80,
-%        lastline=142,
-%    ]{lst/main.c}
-%\end{lstinputlisting}
-%%\end{code}
-%
-%\begin{code}
-%\begin{lstinputlisting}[
-%        label={lst:},
-%        caption={serve\_static\_file},
-%        firstline=144,
-%        lastline=173,
-%    ]{lst/main.c}
-%\end{lstinputlisting}
-%\end{code}
-%
-%\begin{code}
-%\begin{lstinputlisting}[
-%        label={lst:},
-%        caption={list\_directory},
-%        firstline=175,
-%        lastline=198,
-%    ]{lst/main.c}
-%\end{lstinputlisting}
-%\end{code}
-%
-%%\begin{code}
-%%\begin{lstinputlisting}[
-%%        label={lst:},
-%%        caption={set\_nonblocking},
-%%        firstline=200,
-%%        lastline=210,
-%%    ]{lst/main.c}
-%%\end{lstinputlisting}
-%%\end{code}
-%
-%%\begin{code}
-%%\begin{lstinputlisting}[
-%%        label={lst:},
-%%        caption={is\_path\_safe},
-%%        firstline=212,
-%%        lastline=214,
-%%    ]{lst/main.c}
-%%\end{lstinputlisting}
-%%\end{code}
-%
-%%\begin{code}
-%%\begin{lstinputlisting}[
-%%        label={lst:},
-%%        caption={get\_mime\_type},
-%%        firstline=216,
-%%        lastline=230,
-%%    ]{lst/main.c}
-%%\end{lstinputlisting}
-%%\end{code}
-%
-%%\begin{code}
-%%\begin{lstinputlisting}[
-%%        label={lst:},
-%%        caption={log\_event},
-%%        firstline=232,
-%%        lastline=243,
-%%    ]{lst/main.c}
-%%\end{lstinputlisting}
-%%\end{code}
-%
+\subsection{Средства реализации}
+
+Для реализации ПО был выбран язык программирования C~\cite{c}, поскольку в нем есть все инструменты для реализации загружаемого модуля ядра.
+
+В качестве среды разработки был выбран Neovim~\cite{neovim}, так как он позволяет редактировать файлы с исходным кодом программы.
+
+\subsection{Реализация загружаемого модуля ядра}
+
+Ниже представлены реализации функций и структур загружаемого модуля ядра.
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Структура struct mem\_alloc\_entry для логирования информации},
+        firstline=23,
+        lastline=31,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Функция pre\_kmalloc\_handler},
+        firstline=48,
+        lastline=74,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Функция pre\_kmem\_cache\_alloc\_handler},
+        firstline=160,
+        lastline=202,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Проба kp\_kmalloc},
+        firstline=204,
+        lastline=207,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Проба kp\_kmalloc},
+        firstline=224,
+        lastline=227,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Функция init загружаемого модуля},
+        firstline=260,
+        lastline=301,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\begin{lstinputlisting}[
+        label={lst:},
+        caption={Функция exit загружаемого модуля},
+        firstline=303,
+        lastline=322,
+    ]{lst/mem_monitor.c}
+\end{lstinputlisting}
+
+\subsection{Реализация Makefile}
+
+Ниже представлен Makefile для сборки загружаемого модуля ядра.
+
+\begin{lstinputlisting}[
+        label={lst:Makefile},
+        caption={Makefile},
+        firstline=1,
+        lastline=9,
+    ]{lst/Makefile}
+\end{lstinputlisting}
+
+\newpage
+
+\subsection{Реализация программы для генерации потоков}
+
+Ниже представлена программа для генерации потоков, используемая для мониторинга выделения памяти потоками.
+
+\begin{lstinputlisting}[
+        label={lst:threads},
+        caption={threads.c},
+        firstline=1,
+        lastline=25,
+    ]{lst/threads.c}
+\end{lstinputlisting}
+
 %\subsection*{Вывод}
 %
 %В данном разделе были выбраны средства реализации статического сервера, а также приведены листинги кода реализации.
