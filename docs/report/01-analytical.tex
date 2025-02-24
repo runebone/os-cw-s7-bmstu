@@ -5,10 +5,10 @@
 В соответствии с заданием на курсовую работу необходимо разработать загружаемый модуль ядра, позволяющий осуществлять мониторинг выделения памяти в адресном пространстве ядра, предоставляющий информацию о запросах выделения физической памяти и выделения памяти в SLAB-кэше.
 Для решения поставленной задачи необходимо решить следующие задачи:
 \begin{enumerate}
-    \item провести обзор способов выделения памяти в ядре Linux;
-    \item провести обзор способов мониторинга выделения памяти;
-    \item провести сравнительный анализ подходов к решению поставленной задачи;
-    \item разработать алгоритмы и привести структуры данных для решения поставленной задачи;
+    \item провести анализ способов выделения памяти в ядре Linux;
+    \item провести анализ способов мониторинга выделения памяти;
+    \item выбрать функции и механизмы для реализации загружаемого модуля ядра, позволяющего осуществлять мониторинг выделения памяти в адресном пространстве ядра;
+    \item разработать алгоритмы для решения поставленной задачи;
     \item реализовать загружаемый модуль ядра, решающий поставленную задачу;
     \item протестировать разработанное программное обеспечение.
 \end{enumerate}
@@ -111,7 +111,8 @@ typedef struct pglist_data {
     \item ZONE\_DEVICE предназначена для памяти, находящейся на устройствах (например, постоянная память PMEM или память GPU). Эта память имеет другие характеристики, отличающиеся от обычной оперативной памяти (RAM). ZONE\_DEVICE используется, чтобы предоставить драйверам устройств структуры {struct page} и механизмы управления памятью для работы с физическими адресами, определенными устройством.~\cite{mem}
 \end{enumerate}
 
-\subsubsection{Структура struct page и mem\_map}
+\subsubsection{Выделение физических страниц памяти}
+%\subsubsection{Структура struct page и mem\_map}
 
 В ядре Linux каждая физическая страница памяти представляется структурой {struct page}, содержащей метаданные, необходимые для её управления.
 Все структуры {struct page} организованы в {struct page *mem\_map}, который создаётся при инициализации системы и позволяет ядру отслеживать и управлять всей физической памятью.
@@ -227,121 +228,17 @@ struct page {
 	\label{fig:pmem}
 \end{figure}
 
-%\subsection{SLAB-кэш}
-\subsubsection{SLAB-кэш}
+В ядре Linux выделение страниц памяти осуществляется с помощью функции alloc\_pages, которая, в свою очередь, использует Buddy Allocator для управления физической памятью.
 
-Выделение памяти через buddy allocator (используемый для {alloc\_pages()}) неэффективно для мелких объектов, поскольку:
-\begin{itemize}
-    \item Использование целых страниц для маленьких структур ведет к фрагментации;
-    \item Buddy-аллокатор медленный при работе с большим количеством небольших объектов.
-\end{itemize}
+Buddy Allocator --- это механизм управления памятью, используемый в ядре операционной системы для эффективного выделения и освобождения блоков памяти.
+Данный механизм основан на разбиении памяти на блоки, размеры которых являются степенями двойки, и использует парную систему (buddy system), что упрощает объединение и разбиение блоков.
 
-SLAB-аллокатор решает эту проблему, создавая пулы (SLAB-кэши) для повторного использования объектов одного типа.
-
-SLAB-аллокатор --- это механизм управления динамической памятью в ядре Linux, предназначенный для эффективного выделения и повторного использования объектов фиксированного размера (например, task\_struct, inode, dentry).
-Данный аллокатор является частью системы управления памятью и предназначен для работы с небольшими объектами, которые часто выделяются и освобождаются.
-
-Работает аллокатор следующим образом:
-\begin{enumerate}
-    %\item Каждый тип объекта (например, struct task\_struct) получает свой SLAB-кэш (kmem\_cache);
-    %\item При запросе памяти ядро выделяет сразу несколько объектов (batch allocation);
-    \item Ядро создает кэш (kmem\_cache\_create()) для типа объектов (например, task\_struct);
-    \item SLAB-аллокатор выделяет группу объектов сразу и хранит их в struct slab;
-    \item При kmem\_cache\_alloc() ядро берет объект из кэша, а не выделяет память заново;
-    \item Когда объект освобождается (kmem\_cache\_free()) --- возвращается в кэш, а не в buddy allocator;
-    \item Если в кэше не осталось свободных объектов, SLAB-аллокатор запрашивает новые страницы через alloc\_pages().
-\end{enumerate}
-
-\subsubsection{Структуры {struct kmem\_cache} и {struct slab}}
-
-Ниже приведены структуры ядра {struct kmem\_cache} и {struct slab}, используемые при работе со SLAB-аллокатором.
-
-\begin{lstlisting}[caption={struct kmem\_cache}]
-struct kmem_cache {
-	struct array_cache __percpu *cpu_cache;
-    ...
-	unsigned int size;
-    ...
-	slab_flags_t flags;		/* constant flags */
-	unsigned int num;		/* # of objs per slab */
-    ...
-	const char *name;
-	struct list_head list;
-	int refcount;
-	int object_size;
-	int align;
-    ...
-	struct kmem_cache_node *node[MAX_NUMNODES];
-};
-\end{lstlisting}
-
-\begin{lstlisting}[caption={struct slab}]
-struct slab {
-	unsigned long __page_flags;
-#if defined(CONFIG_SLAB)
-	struct kmem_cache *slab_cache;
-	union {
-		struct {
-			struct list_head slab_list;
-			void *freelist;	/* array of free object indexes */
-			void *s_mem;	/* first object */
-		};
-		struct rcu_head rcu_head;
-	};
-	unsigned int active;
-    ...
-#elif defined(CONFIG_SLUB)
-	struct kmem_cache *slab_cache;
-	union {
-		struct {
-			union {
-				struct list_head slab_list;
-                ...
-			};
-			/* Double-word boundary */
-			union {
-				struct {
-					void *freelist;		/* first free object */
-					union {
-						unsigned long counters;
-						struct {
-							unsigned inuse:16;
-							unsigned objects:15;
-							unsigned frozen:1;
-						};
-					};
-				};
-                ...
-			};
-		};
-		struct rcu_head rcu_head;
-	};
-    ...
-#endif
-};
-\end{lstlisting}
-
-
-\subsection{Системные вызовы и связанные с ними функции ядра}
-
-%Для работы с памятью в ядре Linux предусмотрены функции
-Следующие функции ядра предназначены для работы с памятью:
-\begin{itemize}
-    \item alloc\_pages,
-    \item kmem\_cache\_create,
-    \item kmem\_cache\_alloc,
-    \item kmem\_cache\_free,
-    \item kmem\_cache\_destroy,
-    \item kmalloc, kfree
-\end{itemize}
-и другие.
-
-\subsubsection{alloc\_pages}
+\subsubsection*{alloc\_pages}
 
 Функция alloc\_pages() вызывает основную функцию выделения страниц --- \_\_alloc\_pages(), которая выполняет несколько шагов:
 \begin{enumerate}
     \item Выбор зоны памяти;
-    \item Поиск подходящего блока в buddy allocator;
+    \item Поиск подходящего блока в Buddy Allocator;
     \item Выделение памяти.
 \end{enumerate}
 
@@ -361,9 +258,9 @@ struct slab {
 struct page *page = get_page_from_freelist(gfp_mask, order, alloc_flags, alloc_context);
 \end{lstlisting}
 
-\subsubsection*{Поиск подходящего блока в buddy allocator}
+\subsubsection*{Поиск подходящего блока в Buddy Allocator}
 
-Buddy allocator хранит свободные страницы в списках (free\_area).
+Buddy Allocator хранит свободные страницы в списках (free\_area).
 
 \begin{enumerate}
     \item Если есть подходящий свободный блок, то этот блок разбивается и выделяется.
@@ -371,7 +268,7 @@ Buddy allocator хранит свободные страницы в списка
     \item Если памяти недостаточно, включается свопинг (swap) или OOM-Killer.
 \end{enumerate}
 
-Buddy allocator выделяет память вызовом remove\_from\_free\_list():
+Buddy Allocator выделяет память вызовом remove\_from\_free\_list():
 \begin{lstlisting}
 page = remove_from_free_list(zone, order);
 \end{lstlisting}
@@ -398,9 +295,178 @@ page = remove_from_free_list(zone, order);
 if (page) prep_new_page(page, order, gfp_mask);
 \end{lstlisting}
 
-\subsubsection{kmem\_cache\_*}
+%\subsection{SLAB-кэш}
+%\subsubsection{SLAB-кэш}
+\subsubsection{Выделение страниц для небольших объектов}
 
-Далее будут рассмотрены функции kmem\_cache\_alloc, kmem\_cache\_free, kmem\_cache\_create, kmem\_cache\_destroy.
+Выделение памяти через Buddy Allocator (используемый для {alloc\_pages()}) неэффективно для небольших объектов, поскольку:
+\begin{itemize}
+    \item Использование целых страниц для маленьких структур ведет к фрагментации;
+    \item Buddy-аллокатор медленный при работе с большим количеством небольших объектов.
+\end{itemize}
+
+SLAB-аллокатор решает эту проблему, создавая пулы (SLAB-кэши) для повторного использования объектов одного типа.
+
+SLAB-аллокатор --- это механизм управления динамической памятью в ядре Linux, предназначенный для эффективного выделения и повторного использования объектов фиксированного размера (например, task\_struct, inode, dentry).
+Данный аллокатор является частью системы управления памятью и предназначен для работы с небольшими объектами, которые часто выделяются и освобождаются.
+
+Работает аллокатор следующим образом:
+\begin{enumerate}
+    %\item Каждый тип объекта (например, struct task\_struct) получает свой SLAB-кэш (kmem\_cache);
+    %\item При запросе памяти ядро выделяет сразу несколько объектов (batch allocation);
+    \item Ядро создает кэш (struct kmem\_cache, см. Листинг \ref{lst:kmemcache} ниже) через функцию kmem\_cache\_create() для типа объектов (например, task\_struct);
+    \item SLAB-аллокатор выделяет группу объектов сразу и хранит их в struct slab (см. Листинг \ref{lst:slab});
+    \item При kmem\_cache\_alloc() ядро берет объект из кэша, а не выделяет память заново;
+    \item Когда объект освобождается (kmem\_cache\_free()) --- возвращается в кэш, а не в Buddy Allocator;
+    \item Если в кэше не осталось свободных объектов, SLAB-аллокатор запрашивает новые страницы через alloc\_pages().
+\end{enumerate}
+
+%\subsubsection{Структуры {struct kmem\_cache} и {struct slab}}
+%
+%Ниже приведены структуры ядра {struct kmem\_cache} и {struct slab}, используемые при работе со SLAB-аллокатором.
+
+\begin{lstlisting}[label={lst:kmemcache}, caption={struct kmem\_cache}]
+struct kmem_cache {
+	struct array_cache __percpu *cpu_cache;
+    ...
+	unsigned int size;
+    ...
+	slab_flags_t flags;		/* constant flags */
+	unsigned int num;		/* # of objs per slab */
+    ...
+	const char *name;
+	struct list_head list;
+	int refcount;
+	int object_size;
+	int align;
+    ...
+	struct kmem_cache_node *node[MAX_NUMNODES];
+};
+\end{lstlisting}
+
+\begin{lstlisting}[label={lst:slab},caption={struct slab}]
+struct slab {
+	unsigned long __page_flags;
+    ...
+	struct kmem_cache *slab_cache;
+	union {
+		struct {
+			struct list_head slab_list;
+			void *freelist;	/* array of free object indexes */
+			void *s_mem;	/* first object */
+		};
+		struct rcu_head rcu_head;
+	};
+    ...
+	union {
+		struct {
+			union {
+				struct list_head slab_list;
+                ...
+			};
+			/* Double-word boundary */
+			union {
+				struct {
+					void *freelist;		/* first free object */
+					union {
+						unsigned long counters;
+						struct {
+							unsigned inuse:16;
+							unsigned objects:15;
+							unsigned frozen:1;
+						};
+					};
+				};
+                ...
+			};
+		};
+		struct rcu_head rcu_head;
+	};
+    ...
+};
+\end{lstlisting}
+
+
+%\subsection{Системные вызовы и связанные с ними функции ядра}
+
+%Для работы с памятью в ядре Linux предусмотрены функции
+%Следующие функции ядра предназначены для работы с памятью:
+Следующие функции ядра предназначены для работы со SLAB-кэшем:
+\begin{itemize}
+    %\item alloc\_pages,
+    \item kmem\_cache\_create,
+    \item kmem\_cache\_alloc,
+    \item kmem\_cache\_free,
+    \item kmem\_cache\_destroy.
+    %\item kmalloc, kfree
+\end{itemize}
+%и другие.
+
+%\subsubsection{alloc\_pages}
+%
+%Функция alloc\_pages() вызывает основную функцию выделения страниц --- \_\_alloc\_pages(), которая выполняет несколько шагов:
+%\begin{enumerate}
+%    \item Выбор зоны памяти;
+%    \item Поиск подходящего блока в Buddy Allocator;
+%    \item Выделение памяти.
+%\end{enumerate}
+%
+%\subsubsection*{Выбор зоны памяти}
+%
+%Выбор зоны памяти происходит следующим образом --- \_\_alloc\_pages() определяет, из какой зоны (ZONE\_*) выделять память:
+%\begin{itemize}
+%    \item ZONE\_DMA;
+%    \item ZONE\_NORMAL;
+%    \item ZONE\_HIGHMEM;
+%    \item ZONE\_MOVABLE;
+%    \item ZONE\_DEVICE;
+%\end{itemize}
+%
+%После чего функция get\_page\_from\_freelist() ищет свободные страницы в нужной зоне:
+%\begin{lstlisting}
+%struct page *page = get_page_from_freelist(gfp_mask, order, alloc_flags, alloc_context);
+%\end{lstlisting}
+%
+%\subsubsection*{Поиск подходящего блока в Buddy Allocator}
+%
+%Buddy Allocator хранит свободные страницы в списках (free\_area).
+%
+%\begin{enumerate}
+%    \item Если есть подходящий свободный блок, то этот блок разбивается и выделяется.
+%    \item Если нет свободного блока нужного размера, система ищет больше страниц.
+%    \item Если памяти недостаточно, включается свопинг (swap) или OOM-Killer.
+%\end{enumerate}
+%
+%Buddy Allocator выделяет память вызовом remove\_from\_free\_list():
+%\begin{lstlisting}
+%page = remove_from_free_list(zone, order);
+%\end{lstlisting}
+%
+%Причем если
+%\begin{itemize}
+%    \item order = 0 --- выделяется 1 страница;
+%    \item order = 1 --- выделяется 2 страницы ($2^1$);
+%    \item order = 2 --- выделяется 4 страницы ($2^2$)
+%\end{itemize}
+%и так далее.
+%
+%\subsubsection*{Выделение памяти}
+%
+%Если найдена свободная страница, ядро
+%\begin{itemize}
+%\item Помечает её как занятую (PageReserved);
+%\item Обновляет структуру struct page, устанавливая флаги и счётчик ссылок;
+%\item Возвращает struct page *;
+%\end{itemize}
+%
+%После чего функция prep\_new\_page() инициализирует страницу:
+%\begin{lstlisting}
+%if (page) prep_new_page(page, order, gfp_mask);
+%\end{lstlisting}
+
+%\subsubsection{kmem\_cache\_*}
+%
+%Далее будут рассмотрены функции kmem\_cache\_alloc, kmem\_cache\_free, kmem\_cache\_create, kmem\_cache\_destroy.
 
 \subsubsection*{kmem\_cache\_create}
 
@@ -478,7 +544,7 @@ void kmem_cache_free(struct kmem_cache *cachep, void *objp);
 Данная функция
 \begin{itemize}
     \item Добавляет объект обратно в кэш;
-    \item Если кэш заполнен, объект возвращается в buddy allocator;
+    \item Если кэш заполнен, объект возвращается в Buddy Allocator;
     \item Если используется SLAB, объект остаётся в struct slab.
 \end{itemize}
 
@@ -504,7 +570,7 @@ void kmem_cache_destroy(struct kmem_cache *cachep);
 Данная функция
 \begin{itemize}
     \item Освобождает все объекты в кэше;
-    \item Возвращает все занятые страницы в buddy allocator;
+    \item Возвращает все занятые страницы в Buddy Allocator;
     \item Удаляет kmem\_cache из списка SLAB-кэшей.
 \end{itemize}
 
@@ -514,9 +580,9 @@ void kmem_cache_destroy(struct kmem_cache *cachep);
 kmem_cache_destroy(task_struct_cache);
 \end{lstlisting}
 
-\subsubsection{kmalloc}
+\subsubsection{Функции kmalloc и kfree}
 
-Функция kmalloc() используется для выделения памяти в пространстве ядра и работает через SLAB-аллокатор или buddy allocator, в зависимости от размера запроса и конфигурации системы.
+Функция kmalloc() используется для выделения памяти в пространстве ядра и работает через SLAB-аллокатор или Buddy Allocator, в зависимости от размера запроса и конфигурации системы.
 
 \begin{lstlisting}
 void *kmalloc(size_t size, gfp_t flags);
@@ -575,15 +641,29 @@ if (!ptr) printk(KERN_ERR "kmalloc\n");
 void *ptr = kmalloc(8192, GFP_KERNEL);
 \end{lstlisting}
 
-\subsubsection{kfree}
+\subsubsection*{kfree}
 
 Функция kfree() освобождает память.
 Если память была выделена через SLAB, объект возвращается в SLAB-кэш.
 Если память была выделена через alloc\_pages(), страницы освобождаются через \_\_free\_pages().
 
-\begin{lstlisting}[caption={kfree}]
-kfree(ptr);
-\end{lstlisting}
+%\begin{lstlisting}[caption={kfree}]
+%kfree(ptr);
+%\end{lstlisting}
+
+\subsection*{Выбор функций для мониторинга памяти}
+
+Для мониторинга выделения памяти в адресном пространстве ядра выбраны следующие функции:
+\begin{itemize}
+    \item kmalloc,
+    \item kmalloc\_large,
+    \item kmalloc\_slab,
+    \item kmem\_cache\_alloc.
+\end{itemize}
+
+Данные функции выбраны, так как они покрывают основные механизмы выделения памяти в адресном пространстве ядра и дают возможность анализировать использование как SLAB-кэша (kmalloc\_slab, kmem\_cache\_alloc), так и Buddy Allocator (kmalloc\_large).
+
+\newpage
 
 \subsection{Анализ способов мониторинга памяти}
 
@@ -594,6 +674,7 @@ kfree(ptr);
 Существует множество способов перехвата системных вызовов.
 %Далее будут рассмотрены самые распространенные --- kprobes, tracepoints, ftrace, perf и eBPF.
 Далее будут рассмотрены самые распространенные --- kprobes, tracepoints и ftrace.
+%Далее будут рассмотрены распространенные способы --- kprobes и tracepoints.
 
 \subsubsection*{kprobes}
 
@@ -699,6 +780,7 @@ module_exit(kprobe_exit);
 Точки трассировки используются для трассировки и анализа производительности.
 Их можно вставлять в критически важные участки кода, чтобы отслеживать работу системы.~\cite{tracepoints}
 
+
 % TODO: meybi ed samfing from hier: https://www.kernel.org/doc/html/latest/trace/tracepoints.html
 
 \subsubsection*{ftrace}
@@ -707,7 +789,7 @@ Ftrace --- это фреймворк, состоящий из нескольки
 Одно из самых распространенных применений ftrace --- трассировка событий.
 По всему ядру расположены сотни статических точек событий, которые можно включить через файловую систему tracefs, чтобы посмотреть, что происходит в определенных частях ядра.~\cite{ftrace}
 
-В листинге \ref{lst:ftrace} приложения А приведен пример реализации загружаемого модуля ядра для мониторинга системных вызовов \_\_kmalloc и kmem\_-cache\_alloc с использованием фреймворка ftrace.
+%В листинге \ref{lst:ftrace} приложения А приведен пример реализации загружаемого модуля ядра для мониторинга системных вызовов \_\_kmalloc и kmem\_-cache\_alloc с использованием фреймворка ftrace.
 
 %\subsubsection*{perf и eBPF}
 
@@ -721,8 +803,18 @@ Ftrace --- это фреймворк, состоящий из нескольки
 
 %\subsubsection{Выбор метода мониторинга}
 
+\subsection*{Выбор способа мониторинга памяти}
+
+В рамках мониторинга выделения памяти в ядре Linux был выбран kprobes, поскольку данный механизм позволяет перехватывать любые функции, независимо от наличия встроенных tracepoints.
+
 \subsection*{Вывод}
 
-В данном разделе были рассмотрены механизмы выделения памяти в ядре Linux, понятия NUMA, узлов памяти, зон и SLAB-кэша.
-Были рассмотрены структуры struct page, struct kmem\_cache, struct slab и функции alloc\_pages, kmem\_cache\_create, kmem\_cache\_alloc, kmem\_cache\_free, kme-m\_cache\_destroy, kmalloc, kfree.
-Были рассмотрены способы мониторинга памяти с помощью механизмов kprobes, tracepoints и ftrace.
+Анализ структур и функций ядра позволил установить, что выделение памяти в адресном пространстве ядра происходит двумя основными способами в зависимости от размера запрашиваемого блока --- для больших объектов выделяются целые страницы через Buddy Allocator, а для небольших объектов используется SLAB-аллокатор, что позволяет частично решить проблему скрытой фрагментации.
+
+В результате проведенного анализа способов выделения памяти в ядре Linux для мониторинга были выбраны функции kmalloc, kmalloc\_large, kmalloc\_slab, kmem\_cache\_alloc, поскольку они покрывают основные механизмы выделения памяти в адресном пространстве ядра.
+
+В результате проведенного анализа способов мониторинга выделения памяти в ядре Linux был выбран kprobes, поскольку данный механизм позволяет перехватывать любые функции, независимо от наличия встроенных точек трассировки.
+
+%В данном разделе были рассмотрены механизмы выделения памяти в ядре Linux, понятия NUMA, узлов памяти, зон и SLAB-кэша.
+%Были рассмотрены структуры struct page, struct kmem\_cache, struct slab и функции alloc\_pages, kmem\_cache\_create, kmem\_cache\_alloc, kmem\_cache\_free, kme-m\_cache\_destroy, kmalloc, kfree.
+%Были рассмотрены способы мониторинга памяти с помощью механизмов kprobes, tracepoints и ftrace.
