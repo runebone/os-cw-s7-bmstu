@@ -1,5 +1,50 @@
 \section{Конструкторский раздел}
 
+\subsection{IDEF0 диаграмма}
+
+На рисунках \ref{fig:a0} -- \ref{fig:a1} ниже приведена IDEF0 диаграмма разрабатываемого загружаемого модуля ядра.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{diag/idef0-A0.pdf}
+	\caption{Диаграмма уровня A0}
+	\label{fig:a0}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{diag/idef0-A1.pdf}
+	\caption{Диаграмма уровня A1}
+	\label{fig:a1}
+\end{figure}
+
+\newpage
+
+\subsection{Схемы алгоритмов}
+
+На рисунках \ref{fig:kmalloc} -- \ref{fig:show} ниже приведены схемы алгоритмов разрабатываемого загружаемого модуля ядра.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\textwidth]{diag/kmalloc.pdf}
+	\caption{Схема pre\_kmalloc\_handler}
+	\label{fig:kmalloc}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{diag/kmem-cache.pdf}
+	\caption{Схема pre\_kmem\_cache\_alloc\_handler}
+	\label{fig:kmem}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{diag/proc-show.pdf}
+	\caption{Схема mem\_proc\_show}
+	\label{fig:show}
+\end{figure}
+
 %1. IDEF0 A0 или A1
 %2. Схемы алгоритмов по ГОСТу
 %3. Структуры ядра можно
